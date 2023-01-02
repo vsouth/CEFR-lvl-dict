@@ -10,9 +10,13 @@ soup = soup.find("ul", {"class": "top-g"})
 soup = soup.find_all("li")
 print(soup[15]["data-hw"], soup[15]["data-ox5000"])
 words = {}
+id = 0
 for li in soup:
     try:
-        words[li["data-hw"]]=li["data-ox5000"]
+        words[id]= {"word": li["data-hw"], 
+         "CEFR": li["data-ox5000"],
+         "POS": li.find("span", {"class":"pos"}).text}
+        id +=1
     except:
         print(li)
 
