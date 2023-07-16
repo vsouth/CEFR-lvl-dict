@@ -3,6 +3,8 @@ import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet
 import string
+import argparse
+import pathlib
 
 # FIX LATER: pronoun "us" turns into "u"
 
@@ -17,16 +19,17 @@ def load_json(cefr):
         return set(data)
 
 
-def analysis_into_str(analysis):
+def analysis_into_str(analysis, levels):
+    categories = levels+["misc"]
     output = ""
-    output += "\n".join([key + " --- " + str(analysis["stats"][key]) for key in ["a1","a2","b1","b2","c1","misc"]])
+    output += "\n".join([key + " --- " + str(analysis["stats"][key]) for key in categories])
     output += "\n------------------------\n"
-    output += "\n------------------------\n".join([key.upper() +"\n------------------------\n" + "\n".join(sorted([word for word in analysis["words"][key]])) for key in ["a1","a2","b1","b2","c1", "misc"]])
+    output += "\n------------------------\n".join([key.upper() +"\n------------------------\n" + "\n".join(sorted([word for word in analysis["words"][key]])) for key in categories])
     output += "\n"
     return output
 
 
-def save_cheatsheet(data, path = "cheatsheet.txt"):
+def save_cheatsheet(data, path):
     with open(path, "w") as file:
         return file.write(data)
 
@@ -53,13 +56,13 @@ def remove_punctuation_and_unknown(text):
     return text.translate(str.maketrans('', '', string.punctuation))
 
 
-def analyze_CEFR(text):
+def analyze_CEFR(text, levels):
     lemma_list = text_into_lemmatized_list(text)
     list_len = len(lemma_list)
     stats = {}
     words = {}
     checked = set()
-    for lvl in ["a1","a2","b1","b2","c1"]:
+    for lvl in levels:
         cefr_list = load_json(lvl)
         difference = [word for word in lemma_list if word in cefr_list]
         words[lvl] = set(difference)
@@ -70,8 +73,36 @@ def analyze_CEFR(text):
     return {"stats": stats, 
             "words": words}
 
-text = remove_punctuation_and_unknown(load_text())
-analysis = analyze_CEFR(text)
-save_cheatsheet(analysis_into_str(analysis))
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--filename", 
+                        type=str, 
+                        required=False, 
+                        default="raw.txt")
+    parser.add_argument("-l", "--levels", 
+                        help="CEFR-levels to check (default = \"a1,a2,b1,b2,c1\")", 
+                        type=str, 
+                        required=False, 
+                        default="a1,a2,b1,b2,c1")
+    return parser.parse_args()
+
+
+
+def main():
+    args = parse_args()
+
+    filename = pathlib.Path(args.filename)
+    text = remove_punctuation_and_unknown(load_text(filename))
+
+    levels = args.levels.split(",")
+    print(filename.stem, levels)
+    analysis = analyze_CEFR(text, levels)
+
+    output_filename = str(filename.parent) + '/' + filename.stem+"_cheatsheet.txt"
+    save_cheatsheet(analysis_into_str(analysis, levels), path=output_filename)
+
+
+if __name__ == "__main__":
+	main()
 
