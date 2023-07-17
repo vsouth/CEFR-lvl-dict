@@ -1,25 +1,26 @@
 import json
-import nltk
-from nltk.stem import WordNetLemmatizer
-from nltk.corpus import wordnet
+import spacy
 import string
 import argparse
 import pathlib
 
-# FIX LATER: pronoun "us" turns into "u"
+# FIX LATER: 
+# fix analysis %
+# read texts with wrong content smarter
+# добавить мб транскрипции (опционально)
 
-def load_text(path = "raw.txt"):
+def load_text(path: str = "raw.txt") -> str:
     with open(path,"r", errors="ignore") as text:
         return text.read()
 
 
-def load_json(cefr):
+def load_json(cefr: str) -> set:
     with open(f"{cefr}_words.json", "r") as json_file:
         data = json.load(json_file)
         return set(data)
 
 
-def analysis_into_str(analysis, levels):
+def analysis_into_str(analysis, levels) -> str:
     categories = levels+["misc"]
     output = ""
     output += "\n".join([key + " --- " + str(analysis["stats"][key]) for key in categories])
@@ -29,34 +30,26 @@ def analysis_into_str(analysis, levels):
     return output
 
 
-def save_cheatsheet(data, path):
+def save_cheatsheet(data, path: str) -> None:
     with open(path, "w") as file:
         return file.write(data)
 
 
-def get_wordnet_pos(word):
-    """Map POS tag to first character lemmatize() accepts"""
-    tag = nltk.pos_tag([word])[0][1][0].upper()
-    tag_dict = {"J": wordnet.ADJ,
-                "N": wordnet.NOUN,
-                "V": wordnet.VERB,
-                "R": wordnet.ADV}
-    return tag_dict.get(tag, wordnet.NOUN)
+def lemmatize_text(text: str) -> str:
+    nlp = spacy.load('en_core_web_sm', disable=['parser', 'ner'])
+    doc = nlp(text)
+    return " ".join([token.lemma_ for token in doc])
 
+def text_into_lemmatized_list(text: str) -> list[str]:
+    return lemmatize_text(text).split(' ')
 
-def text_into_lemmatized_list(text):
-    lemmatizer = WordNetLemmatizer()
-    list_from_text = [lemmatizer.lemmatize(w, get_wordnet_pos(w)).lower() for w in nltk.word_tokenize(text)]
-    return list_from_text
-    
-
-def remove_punctuation_and_unknown(text):
+def remove_punctuation_and_unknown(text: str) -> str:
     printable = string.printable
     text = ''.join(filter(lambda x: x in printable, text))
     return text.translate(str.maketrans('', '', string.punctuation))
 
 
-def analyze_CEFR(text, levels):
+def analyze_CEFR(text: str, levels: list[str]) -> dict:
     lemma_list = text_into_lemmatized_list(text)
     list_len = len(lemma_list)
     stats = {}
